@@ -1,6 +1,6 @@
-# sequelize-stream
+# node-sequelize-stream
 
-sequelize-stream is a library allowing to stream data with sequelize.
+node-sequelize-stream is a library allowing to stream data with sequelize.
 
 To have "findAllWithStream" in your models:
 
