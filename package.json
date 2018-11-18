@@ -1,0 +1,28 @@
+{
+  "name": "sequelize-stream",
+  "version": "1.0.0",
+  "description": "Library for streaming sequelize requests",
+  "main": "index.js",
+  "scripts": {
+      "lint": "eslint *.js",
+      "lint-fix": "eslint *.js --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nkovalenko93/sequelize-stream.git"
+  },
+  "keywords": [
+    "sequelize",
+    "stream"
+  ],
+  "author": "Nikolai Kovalenko",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nkovalenko93/sequelize-stream/issues"
+  },
+  "homepage": "https://github.com/nkovalenko93/sequelize-stream#readme",
+  "devDependencies": {
+    "eslint": "5.9.0",
+    "eslint-config-google": "0.11.0"
+  }
+}
