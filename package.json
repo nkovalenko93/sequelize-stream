@@ -1,5 +1,5 @@
 {
-  "name": "sequelize-stream",
+  "name": "node-sequelize-stream",
   "version": "1.0.0",
   "description": "Library for streaming sequelize requests",
   "main": "index.js",

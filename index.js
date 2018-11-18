@@ -62,7 +62,7 @@ function findAllWithStream(params) {
 function init(sequelize, defaultBatchSize) {
   for (const modelName of Object.keys(sequelize.models)) {
     sequelize.models[modelName].findAllWithStream = findAllWithStream;
-    if (!sequelize.models[modelName].BATCH_SIZE) {
+    if (!sequelize.models[modelName].BATCH_SIZE || defaultBatchSize) {
       sequelize.models[modelName].BATCH_SIZE = defaultBatchSize || DEFAULT_BATCH_SIZE;
     }
   }
