@@ -24,7 +24,7 @@ stream.pipe(res);
 `function findAllWithStream` returns a readable stream.
 
 
-Also batch size can be set for each user separately like this:
+Also batch size can be set for each model separately like this:
 ```
 const User = instance.define('User', {...});
 User.BATCH_SIZE = 10;
