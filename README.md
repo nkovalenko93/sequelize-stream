@@ -22,13 +22,21 @@ stream.pipe(res);
 ```
 
 ```
-const stream = db.models.User.bulkCreate([{id: 1, name: 'SomeUser'}, ...], {batchSize: 50});
+const stream = db.models.User.bulkCreateWithStream([{id: 1, name: 'SomeUser'}, ...], {batchSize: 50});
 stream.pipe(res);
 ```
 
-`batchSize` - is an optional parameter that means default batch size for target fetching (model batch size or default batch size will be taken if parameter is not defined).
+```
+const stream = db.models.User.updateWithStream([{name: 'UpdatedName'}, ...], {batchSize: 50, where: {...}});
+stream.pipe(res);
+```
 
-`function findAllWithStream` returns a readable stream.
+```
+const stream = db.models.User.destroyWithStream({batchSize: 50, where: {...}});
+stream.pipe(res);
+```
+
+`batchSize` - is an optional parameter that means default batch size for target action (model batch size or default batch size will be taken if parameter is not defined).
 
 
 Also batch size can be set for each model separately like this:

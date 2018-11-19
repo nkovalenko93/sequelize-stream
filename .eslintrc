@@ -1,5 +1,8 @@
 {
-  "extends": ["eslint:recommended", "google"],
+  "extends": [
+    "eslint:recommended",
+    "google"
+  ],
   "parserOptions": {
     "ecmaVersion": 9,
     "sourceType": "module"
@@ -8,8 +11,18 @@
     "node": true
   },
   "rules": {
-    "object-curly-spacing": ["error", "always"],
-    "max-len": ["error", { "code": 120 }],
-    "no-invalid-this": 0
+    "object-curly-spacing": [
+      "error",
+      "always"
+    ],
+    "max-len": [
+      "error",
+      {
+        "code": 120
+      }
+    ],
+    "no-invalid-this": 0,
+    "arrow-parens": 0,
+    "comma-dangle": 0
   }
 }
