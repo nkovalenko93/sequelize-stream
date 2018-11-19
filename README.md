@@ -20,7 +20,7 @@ stream.pipe(res);
 ```
 
 ```
-const stream = db.models.User.bulkCreate([{ id: 1, name: 'SomeUser' }, ...], {batchSize: 50});
+const stream = db.models.User.bulkCreate([{id: 1, name: 'SomeUser'}, ...], {batchSize: 50});
 stream.pipe(res);
 ```
 
