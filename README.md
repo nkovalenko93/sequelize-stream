@@ -27,7 +27,7 @@ stream.pipe(res);
 ```
 
 ```
-const stream = db.models.User.updateWithStream([{name: 'UpdatedName'}, ...], {batchSize: 50, where: {...}});
+const stream = db.models.User.updateWithStream({name: 'UpdatedName'}, {batchSize: 50, where: {...}});
 stream.pipe(res);
 ```
 
