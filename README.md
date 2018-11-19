@@ -2,6 +2,8 @@
 
 node-sequelize-stream is a library allowing to stream data with sequelize.
 
+`npm install node-sequelize-stream`
+
 To have "findAllWithStream" method in your models you need to pass your sequelize instance to `sequelizeStream` function:
 
 ```
