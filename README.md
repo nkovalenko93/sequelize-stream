@@ -19,6 +19,11 @@ const stream = db.models.User.findAllWithStream({batchSize: 50});
 stream.pipe(res);
 ```
 
+```
+const stream = db.models.User.bulkCreate([{ id: 1, name: 'SomeUser' }, ...], {batchSize: 50});
+stream.pipe(res);
+```
+
 `batchSize` - is an optional parameter that means default batch size for target fetching (model batch size or default batch size will be taken if parameter is not defined).
 
 `function findAllWithStream` returns a readable stream.
@@ -29,6 +34,3 @@ Also batch size can be set for each model separately like this:
 const User = instance.define('User', {...});
 User.BATCH_SIZE = 10;
 ```
-
-
-`bulkCreateWithStream` method will be implemented soon.
