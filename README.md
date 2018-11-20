@@ -22,17 +22,27 @@ stream.pipe(res);
 ```
 
 ```
-const stream = db.models.User.bulkCreateWithStream([{id: 1, name: 'SomeUser'}, ...], {batchSize: 50, ...otherSequelizeParams});
+const stream = db.models.User.bulkCreateWithStream(
+  [{id: 1, name: 'SomeUser'}, ...], 
+  {batchSize: 50, ...otherSequelizeParams}
+);
 stream.pipe(res);
 ```
 
 ```
-const stream = db.models.User.updateWithStream({name: 'UpdatedName'}, {batchSize: 50, where: {...}, ...otherSequelizeParams});
+const stream = db.models.User.updateWithStream(
+  {name: 'UpdatedName'}, 
+  {batchSize: 50, where: {...}, ...otherSequelizeParams}
+);
 stream.pipe(res);
 ```
 
 ```
-const stream = db.models.User.destroyWithStream({batchSize: 50, where: {...}, ...otherSequelizeParams});
+const stream = db.models.User.destroyWithStream({
+  batchSize: 50, 
+  where: {...}, 
+  ...otherSequelizeParams
+});
 stream.pipe(res);
 ```
 
