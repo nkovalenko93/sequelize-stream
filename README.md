@@ -9,6 +9,7 @@ To have "findAllWithStream" method in your models you need to pass your sequeliz
 ```
 const sequelizeStream = require('node-sequelize-stream');
 const sequelize = new Sequelize(...);
+// models initialization
 sequelizeStream(sequelize, defaultBatchSize);
 
 ```
