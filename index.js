@@ -44,10 +44,10 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
  * @param {array} items - items to be created
  * @param {number} batchSize - size of batches to fetch from database
  */
-async function performBulkCreate(model, inputStream, items, { batchSize = DEFAULT_BATCH_SIZE }) {
+async function performBulkCreate(model, inputStream, items, { batchSize = DEFAULT_BATCH_SIZE, ...params }) {
   const chunks = lodash.chunk(items, batchSize);
   for (const chunk of chunks) {
-    const items = await model.bulkCreate(chunk);
+    const items = await model.bulkCreate(chunk, params);
     inputStream.push(JSON.stringify(items));
   }
   inputStream.push(null); // Means end of stream
