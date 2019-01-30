@@ -15,26 +15,30 @@ const DEFAULT_BATCH_SIZE = 100;
  * @param {object} params - other Sequelize parameters
  */
 async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZE, limit, offset = 0, ...params }) {
-  let max = limit;
-  if (!max) {
-    max = await model.count({ ...params, limit, offset });
+  try {
+    let max = limit;
+    if (!max) {
+      max = await model.count({ ...params, limit, offset });
+    }
+    const offsets = [];
+    let start = offset;
+    while (start < max) {
+      offsets.push(start);
+      start += batchSize;
+    }
+    for (const offset of offsets) {
+      const difference = (batchSize + offset - max);
+      const items = await model.findAll({
+        ...params,
+        offset,
+        limit: difference > 0 ? batchSize - difference : batchSize,
+      });
+      inputStream.push(JSON.stringify(items));
+    }
+    inputStream.push(null); // Means end of stream
+  } catch (err) {
+    inputStream.destroy(err);
   }
-  const offsets = [];
-  let start = offset;
-  while (start < max) {
-    offsets.push(start);
-    start += batchSize;
-  }
-  for (const offset of offsets) {
-    const difference = (batchSize + offset - max);
-    const items = await model.findAll({
-      ...params,
-      offset,
-      limit: difference > 0 ? batchSize - difference : batchSize,
-    });
-    inputStream.push(JSON.stringify(items));
-  }
-  inputStream.push(null); // Means end of stream
 }
 
 
@@ -45,12 +49,16 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
  * @param {number} batchSize - size of batches to fetch from database
  */
 async function performBulkCreate(model, inputStream, items, { batchSize = DEFAULT_BATCH_SIZE, ...params }) {
-  const chunks = lodash.chunk(items, batchSize);
-  for (const chunk of chunks) {
-    const items = await model.bulkCreate(chunk, params);
-    inputStream.push(JSON.stringify(items));
+  try {
+    const chunks = lodash.chunk(items, batchSize);
+    for (const chunk of chunks) {
+      const items = await model.bulkCreate(chunk, params);
+      inputStream.push(JSON.stringify(items));
+    }
+    inputStream.push(null); // Means end of stream
+  } catch (err) {
+    inputStream.destroy(err);
   }
-  inputStream.push(null); // Means end of stream
 }
 
 
@@ -63,46 +71,50 @@ async function performBulkCreate(model, inputStream, items, { batchSize = DEFAUL
  * @param {object} params - other Sequelize parameters
  */
 async function performUpdateOrDestroy(model, inputStream, method, { batchSize = DEFAULT_BATCH_SIZE, ...params }, item) {
-  const max = await model.count(params);
-  const offset = 0;
-  const offsets = [];
-  let start = offset;
-  while (start < max) {
-    offsets.push(start);
-    start += batchSize;
-  }
+  try {
+    const max = await model.count(params);
+    const offset = 0;
+    const offsets = [];
+    let start = offset;
+    while (start < max) {
+      offsets.push(start);
+      start += batchSize;
+    }
 
-  const schema = await model.describe();
-  const primaryKey = Object.keys(schema).find(field => schema[field].primaryKey);
+    const schema = await model.describe();
+    const primaryKey = Object.keys(schema).find(field => schema[field].primaryKey);
 
-  for (const offset of offsets) {
-    const difference = (batchSize + offset - max);
-    const items = await model.findAll({
-      ...params,
-      offset: (method === 'update') ? offset : 0,
-      limit: difference > 0 ? batchSize - difference : batchSize
-    });
-
-    const updatedItems = (method === 'update') ?
-      await model.update(item, {
+    for (const offset of offsets) {
+      const difference = (batchSize + offset - max);
+      const items = await model.findAll({
         ...params,
-        where: {
-          ...params.where,
-          [primaryKey]: items.map(item => item[primaryKey])
-        },
-        offset,
-        limit: difference > 0 ? batchSize - difference : batchSize,
-      }) :
-      await model.destroy({
-        ...params,
-        where: {
-          ...params.where,
-          [primaryKey]: items.map(item => item[primaryKey])
-        }
+        offset: (method === 'update') ? offset : 0,
+        limit: difference > 0 ? batchSize - difference : batchSize
       });
-    inputStream.push(JSON.stringify(updatedItems));
+
+      const updatedItems = (method === 'update') ?
+        await model.update(item, {
+          ...params,
+          where: {
+            ...params.where,
+            [primaryKey]: items.map(item => item[primaryKey])
+          },
+          offset,
+          limit: difference > 0 ? batchSize - difference : batchSize,
+        }) :
+        await model.destroy({
+          ...params,
+          where: {
+            ...params.where,
+            [primaryKey]: items.map(item => item[primaryKey])
+          }
+        });
+      inputStream.push(JSON.stringify(updatedItems));
+    }
+    inputStream.push(null); // Means end of stream
+  } catch (err) {
+    inputStream.destroy(err);
   }
-  inputStream.push(null); // Means end of stream
 }
 
 
@@ -113,7 +125,8 @@ async function performUpdateOrDestroy(model, inputStream, method, { batchSize = 
 function findAllWithStream(params) {
   const model = this;
   const inputStream = new Readable({
-    read: function() {},
+    read: function () {
+    },
   });
   performSearch(model, inputStream, { batchSize: model.BATCH_SIZE, ...params });
   return inputStream;
@@ -128,7 +141,8 @@ function findAllWithStream(params) {
 function bulkCreateWithStream(items, params) {
   const model = this;
   const inputStream = new Readable({
-    read: function() {},
+    read: function () {
+    },
   });
   performBulkCreate(model, inputStream, items, { batchSize: model.BATCH_SIZE, ...params });
   return inputStream;
@@ -143,7 +157,7 @@ function bulkCreateWithStream(items, params) {
 function updateWithStream(item, params) {
   const model = this;
   const inputStream = new Readable({
-    read: function() {
+    read: function () {
     },
   });
   performUpdateOrDestroy(model, inputStream, 'update', { batchSize: model.BATCH_SIZE, ...params }, item);
@@ -158,7 +172,7 @@ function updateWithStream(item, params) {
 function destroyWithStream(params) {
   const model = this;
   const inputStream = new Readable({
-    read: function() {
+    read: function () {
     },
   });
   performUpdateOrDestroy(model, inputStream, 'destroy', { batchSize: model.BATCH_SIZE, ...params });
@@ -184,3 +198,4 @@ function init(sequelize, defaultBatchSize) {
 
 
 module.exports = init;
+
