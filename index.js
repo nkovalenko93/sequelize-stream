@@ -18,7 +18,7 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
   try {
     let max = limit;
     if (!max) {
-      max = await model.count({ ...params, limit, offset });
+      max = await model.count({ ...params, attributes: undefined, limit, offset });
     }
     const offsets = [];
     let start = offset;
@@ -72,7 +72,7 @@ async function performBulkCreate(model, inputStream, items, { batchSize = DEFAUL
  */
 async function performUpdateOrDestroy(model, inputStream, method, { batchSize = DEFAULT_BATCH_SIZE, ...params }, item) {
   try {
-    const max = await model.count(params);
+    const max = await model.count({ ...params, attributes: undefined });
     const offset = 0;
     const offsets = [];
     let start = offset;
