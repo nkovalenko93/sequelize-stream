@@ -6,3 +6,5 @@ node_modules
 .eslintrc
 .gitignore
 .npmignore
+server.js
+docker-compose.yml
