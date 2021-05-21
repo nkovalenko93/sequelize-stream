@@ -1,9 +1,27 @@
 'use strict';
 
 const { Readable } = require('stream');
-const lodash = require('lodash');
+const splitByChunks = require('lodash.chunk');
 
 const DEFAULT_BATCH_SIZE = 100;
+
+
+const getIsObjectMode = (model, params) => {
+  let objectMode = params.isObjectMode;
+  if ((typeof objectMode) !== 'boolean') {
+    objectMode = model.IS_OBJECT_MODE || false;
+  }
+  return (objectMode || false);
+};
+
+
+const createReadableStream = (model, params = {}) => {
+  return new Readable({
+    objectMode: getIsObjectMode(model, params),
+    read: function() {
+    },
+  });
+};
 
 
 /**
@@ -26,14 +44,17 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
       offsets.push(start);
       start += batchSize;
     }
+    const isObjectMode = getIsObjectMode(model, params);
     for (const offset of offsets) {
       const difference = (batchSize + offset - max);
-      const items = await model.findAll({
-        ...params,
-        offset,
-        limit: difference > 0 ? batchSize - difference : batchSize,
-      });
-      inputStream.push(JSON.stringify(items));
+      const items = (
+        await model.findAll({
+          ...params,
+          offset,
+          limit: difference > 0 ? batchSize - difference : batchSize,
+        })
+      ).map(item => item.toJSON());
+      inputStream.push(isObjectMode ? items : JSON.stringify(items));
     }
     inputStream.push(null); // Means end of stream
   } catch (err) {
@@ -50,7 +71,7 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
  */
 async function performBulkCreate(model, inputStream, items, { batchSize = DEFAULT_BATCH_SIZE, ...params }) {
   try {
-    const chunks = lodash.chunk(items, batchSize);
+    const chunks = splitByChunks(items, batchSize);
     for (const chunk of chunks) {
       const items = await model.bulkCreate(chunk, params);
       inputStream.push(JSON.stringify(items));
@@ -124,10 +145,7 @@ async function performUpdateOrDestroy(model, inputStream, method, { batchSize = 
  */
 function findAllWithStream(params) {
   const model = this;
-  const inputStream = new Readable({
-    read: function () {
-    },
-  });
+  const inputStream = createReadableStream(model, params);
   performSearch(model, inputStream, { batchSize: model.BATCH_SIZE, ...params });
   return inputStream;
 }
@@ -140,10 +158,7 @@ function findAllWithStream(params) {
  */
 function bulkCreateWithStream(items, params) {
   const model = this;
-  const inputStream = new Readable({
-    read: function () {
-    },
-  });
+  const inputStream = createReadableStream(model, params);
   performBulkCreate(model, inputStream, items, { batchSize: model.BATCH_SIZE, ...params });
   return inputStream;
 }
@@ -156,10 +171,7 @@ function bulkCreateWithStream(items, params) {
  */
 function updateWithStream(item, params) {
   const model = this;
-  const inputStream = new Readable({
-    read: function () {
-    },
-  });
+  const inputStream = createReadableStream(model, params);
   performUpdateOrDestroy(model, inputStream, 'update', { batchSize: model.BATCH_SIZE, ...params }, item);
   return inputStream;
 }
@@ -171,10 +183,7 @@ function updateWithStream(item, params) {
  */
 function destroyWithStream(params) {
   const model = this;
-  const inputStream = new Readable({
-    read: function () {
-    },
-  });
+  const inputStream = createReadableStream(model, params);
   performUpdateOrDestroy(model, inputStream, 'destroy', { batchSize: model.BATCH_SIZE, ...params });
   return inputStream;
 }
@@ -184,7 +193,7 @@ function destroyWithStream(params) {
  * @param {object} sequelize - Sequelize object
  * @param {number} defaultBatchSize - default batch size
  */
-function init(sequelize, defaultBatchSize) {
+function init(sequelize, defaultBatchSize, isObjectMode = false) {
   for (const modelName of Object.keys(sequelize.models)) {
     sequelize.models[modelName].findAllWithStream = findAllWithStream;
     sequelize.models[modelName].bulkCreateWithStream = bulkCreateWithStream;
@@ -192,6 +201,9 @@ function init(sequelize, defaultBatchSize) {
     sequelize.models[modelName].destroyWithStream = destroyWithStream;
     if (!sequelize.models[modelName].BATCH_SIZE || defaultBatchSize) {
       sequelize.models[modelName].BATCH_SIZE = defaultBatchSize || DEFAULT_BATCH_SIZE;
+    }
+    if ((typeof sequelize.models[modelName].IS_OBJECT_MODE) !== 'boolean') {
+      sequelize.models[modelName].IS_OBJECT_MODE = isObjectMode;
     }
   }
 }

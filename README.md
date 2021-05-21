@@ -10,7 +10,7 @@ To have "findAllWithStream" method in your models you need to pass your sequeliz
 const sequelizeStream = require('node-sequelize-stream');
 const sequelize = new Sequelize(...);
 // models initialization
-sequelizeStream(sequelize, defaultBatchSize);
+sequelizeStream(sequelize, defaultBatchSize, isObjectMode);
 
 ```
 
@@ -18,14 +18,14 @@ sequelizeStream(sequelize, defaultBatchSize);
 
 To get stream object you need to do:
 ```
-const stream = db.models.User.findAllWithStream({batchSize: 50, ...otherSequelizeParams});
+const stream = db.models.User.findAllWithStream({batchSize: 50, isObjectMode: true, ...otherSequelizeParams});
 stream.pipe(res);
 ```
 
 ```
 const stream = db.models.User.bulkCreateWithStream(
   [{id: 1, name: 'SomeUser'}, ...], 
-  {batchSize: 50, ...otherSequelizeParams}
+  {batchSize: 50, isObjectMode: true, ...otherSequelizeParams}
 );
 stream.pipe(res);
 ```
@@ -33,14 +33,15 @@ stream.pipe(res);
 ```
 const stream = db.models.User.updateWithStream(
   {name: 'UpdatedName'}, 
-  {batchSize: 50, where: {...}, ...otherSequelizeParams}
+  {batchSize: 50, isObjectMode: true, where: {...}, ...otherSequelizeParams}
 );
 stream.pipe(res);
 ```
 
 ```
 const stream = db.models.User.destroyWithStream({
-  batchSize: 50, 
+  batchSize: 50,
+  isObjectMode: true,
   where: {...}, 
   ...otherSequelizeParams
 });
@@ -49,9 +50,12 @@ stream.pipe(res);
 
 `batchSize` - is an optional parameter that means default batch size for target action (model batch size or default batch size will be taken if parameter is not defined).
 
+`isObjectMode` - is an optional parameter that switches object mode for a stream. If enabled then stream chunks will be an object. If disabled then stream chunk is a buffer as usual.
+
 
 Also batch size can be set for each model separately like this:
 ```
 const User = instance.define('User', {...});
 User.BATCH_SIZE = 10;
+User.IS_OBJECT_MODE = true;
 ```
