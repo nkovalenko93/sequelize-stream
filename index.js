@@ -45,20 +45,32 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
       start += batchSize;
     }
     const isObjectMode = getIsObjectMode(model, params);
-    for (const offset of offsets) {
-      const difference = (batchSize + offset - max);
-      const items = (
-        await model.findAll({
-          ...params,
-          offset,
-          limit: difference > 0 ? batchSize - difference : batchSize,
-        })
-      ).map(item => item.toJSON());
-      inputStream.push(isObjectMode ? items : JSON.stringify(items));
+    if (!inputStream.destroyed) {
+      for (const offset of offsets) {
+        if (!inputStream.destroyed) {
+          const difference = (batchSize + offset - max);
+          if (!inputStream.destroyed) {
+            const items = (
+              await model.findAll({
+                ...params,
+                offset,
+                limit: difference > 0 ? batchSize - difference : batchSize,
+              })
+            ).map(item => item.toJSON());
+            if (!inputStream.destroyed) {
+              inputStream.push(isObjectMode ? items : JSON.stringify(items));
+            }
+          }
+        }
+      }
     }
-    inputStream.push(null); // Means end of stream
+    if (!inputStream.destroyed) {
+      inputStream.push(null); // Means end of stream
+    }
   } catch (err) {
-    inputStream.destroy(err);
+    if (!inputStream.destroyed) {
+      inputStream.destroy(err);
+    }
   }
 }
 
@@ -72,13 +84,23 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
 async function performBulkCreate(model, inputStream, items, { batchSize = DEFAULT_BATCH_SIZE, ...params }) {
   try {
     const chunks = splitByChunks(items, batchSize);
-    for (const chunk of chunks) {
-      const items = await model.bulkCreate(chunk, params);
-      inputStream.push(JSON.stringify(items));
+    if (!inputStream.destroyed) {
+      for (const chunk of chunks) {
+        if (!inputStream.destroyed) {
+          const items = await model.bulkCreate(chunk, params);
+          if (!inputStream.destroyed) {
+            inputStream.push(JSON.stringify(items));
+          }
+        }
+      }
     }
-    inputStream.push(null); // Means end of stream
+    if (!inputStream.destroyed) {
+      inputStream.push(null); // Means end of stream
+    }
   } catch (err) {
-    inputStream.destroy(err);
+    if (!inputStream.destroyed) {
+      inputStream.destroy(err);
+    }
   }
 }
 
@@ -105,36 +127,48 @@ async function performUpdateOrDestroy(model, inputStream, method, { batchSize = 
     const schema = await model.describe();
     const primaryKey = Object.keys(schema).find(field => schema[field].primaryKey);
 
-    for (const offset of offsets) {
-      const difference = (batchSize + offset - max);
-      const items = await model.findAll({
-        ...params,
-        offset: (method === 'update') ? offset : 0,
-        limit: difference > 0 ? batchSize - difference : batchSize
-      });
+    if (!inputStream.destroyed) {
+      for (const offset of offsets) {
+        if (!inputStream.destroyed) {
+          const difference = (batchSize + offset - max);
+          const items = await model.findAll({
+            ...params,
+            offset: (method === 'update') ? offset : 0,
+            limit: difference > 0 ? batchSize - difference : batchSize
+          });
 
-      const updatedItems = (method === 'update') ?
-        await model.update(item, {
-          ...params,
-          where: {
-            ...params.where,
-            [primaryKey]: items.map(item => item[primaryKey])
-          },
-          offset,
-          limit: difference > 0 ? batchSize - difference : batchSize,
-        }) :
-        await model.destroy({
-          ...params,
-          where: {
-            ...params.where,
-            [primaryKey]: items.map(item => item[primaryKey])
+          if (!inputStream.destroyed) {
+            const updatedItems = (method === 'update') ?
+              await model.update(item, {
+                ...params,
+                where: {
+                  ...params.where,
+                  [primaryKey]: items.map(item => item[primaryKey])
+                },
+                offset,
+                limit: difference > 0 ? batchSize - difference : batchSize,
+              }) :
+              await model.destroy({
+                ...params,
+                where: {
+                  ...params.where,
+                  [primaryKey]: items.map(item => item[primaryKey])
+                }
+              });
+            if (!inputStream.destroyed) {
+              inputStream.push(JSON.stringify(updatedItems));
+            }
           }
-        });
-      inputStream.push(JSON.stringify(updatedItems));
+        }
+      }
     }
-    inputStream.push(null); // Means end of stream
+    if (!inputStream.destroyed) {
+      inputStream.push(null); // Means end of stream
+    }
   } catch (err) {
-    inputStream.destroy(err);
+    if (!inputStream.destroyed) {
+      inputStream.destroy(err);
+    }
   }
 }
 
@@ -146,7 +180,9 @@ async function performUpdateOrDestroy(model, inputStream, method, { batchSize = 
 function findAllWithStream(params) {
   const model = this;
   const inputStream = createReadableStream(model, params);
-  performSearch(model, inputStream, { batchSize: model.BATCH_SIZE, ...params });
+  if (!inputStream.destroyed) {
+    performSearch(model, inputStream, { batchSize: model.BATCH_SIZE, ...params });
+  }
   return inputStream;
 }
 
@@ -159,7 +195,9 @@ function findAllWithStream(params) {
 function bulkCreateWithStream(items, params) {
   const model = this;
   const inputStream = createReadableStream(model, params);
-  performBulkCreate(model, inputStream, items, { batchSize: model.BATCH_SIZE, ...params });
+  if (!inputStream.destroyed) {
+    performBulkCreate(model, inputStream, items, { batchSize: model.BATCH_SIZE, ...params });
+  }
   return inputStream;
 }
 
@@ -172,7 +210,9 @@ function bulkCreateWithStream(items, params) {
 function updateWithStream(item, params) {
   const model = this;
   const inputStream = createReadableStream(model, params);
-  performUpdateOrDestroy(model, inputStream, 'update', { batchSize: model.BATCH_SIZE, ...params }, item);
+  if (!inputStream.destroyed) {
+    performUpdateOrDestroy(model, inputStream, 'update', { batchSize: model.BATCH_SIZE, ...params }, item);
+  }
   return inputStream;
 }
 
@@ -184,7 +224,9 @@ function updateWithStream(item, params) {
 function destroyWithStream(params) {
   const model = this;
   const inputStream = createReadableStream(model, params);
-  performUpdateOrDestroy(model, inputStream, 'destroy', { batchSize: model.BATCH_SIZE, ...params });
+  if (!inputStream.destroyed) {
+    performUpdateOrDestroy(model, inputStream, 'destroy', { batchSize: model.BATCH_SIZE, ...params });
+  }
   return inputStream;
 }
 
