@@ -2,6 +2,8 @@
 
 const { Readable } = require('stream');
 const splitByChunks = require('lodash.chunk');
+const { format } = require('path');
+const stringify = require('csv-stringify');
 
 const DEFAULT_BATCH_SIZE = 100;
 
@@ -18,7 +20,7 @@ const getIsObjectMode = (model, params) => {
 const createReadableStream = (model, params = {}) => {
   return new Readable({
     objectMode: getIsObjectMode(model, params),
-    read: function() {
+    read: function () {
     },
   });
 };
@@ -60,6 +62,69 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
             if (!inputStream.destroyed) {
               inputStream.push(isObjectMode ? items : JSON.stringify(items));
             }
+          }
+        }
+      }
+    }
+    if (!inputStream.destroyed) {
+      inputStream.push(null); // Means end of stream
+    }
+  } catch (err) {
+    if (!inputStream.destroyed) {
+      inputStream.destroy(err);
+    }
+  }
+}
+
+/**
+ * @param {object} model - Sequelize model
+ * @param {object} inputStream - readable stream object
+ * @param {number} batchSize - size of batches to fetch from database
+ * @param {number} limit - Sequelize limit parameter
+ * @param {number} offset - Sequelize offset parameter
+ * @param {object} params - other Sequelize parameters
+ */
+async function getCsvPerformSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZE, limit, offset = 0, ...params }) {
+  try {
+    let max = limit;
+    if (!max) {
+      max = await model.count({ ...params, attributes: undefined, limit, offset });
+    }
+    const offsets = [];
+    let start = offset;
+    while (start < max) {
+      offsets.push(start);
+      start += batchSize;
+    }
+    if (!inputStream.destroyed) {
+      let indx = 0;
+      for (const offset of offsets) {
+        if (!inputStream.destroyed) {
+          console.log('BATCH: ' + batchSize)
+          const difference = (batchSize + offset - max);
+          if (!inputStream.destroyed) {
+            const header = indx === 0 ? true : false;
+            indx += 1;
+            let items = (
+              await model.findAll({
+                ...params,
+                offset,
+                limit: difference > 0 ? batchSize - difference : batchSize,
+              })
+            ).map(item => item.toJSON());
+            let columnsFromObject = Object.keys(items[0]);
+            stringify(items, {
+              header: header,
+              columns: columnsFromObject
+            }, function (err, data) {
+              if (err) {
+                throw err;
+              }
+
+              if (!inputStream.destroyed) {
+                inputStream.push(data);
+              }
+            })
           }
         }
       }
@@ -186,6 +251,19 @@ function findAllWithStream(params) {
   return inputStream;
 }
 
+/**
+ * @param {object} params - Sequelize parameters
+ * @return {object} - readable stream object
+ */
+function getCsvfindAllWithStream(params) {
+  const model = this;
+  const inputStream = createReadableStream(model, params);
+  if (!inputStream.destroyed) {
+    getCsvPerformSearch(model, inputStream, { batchSize: model.BATCH_SIZE, ...params });
+  }
+  return inputStream;
+}
+
 
 /**
  * @param {array} items - array of objects to create
@@ -241,6 +319,7 @@ function init(sequelize, defaultBatchSize, isObjectMode = false) {
     sequelize.models[modelName].bulkCreateWithStream = bulkCreateWithStream;
     sequelize.models[modelName].updateWithStream = updateWithStream;
     sequelize.models[modelName].destroyWithStream = destroyWithStream;
+    sequelize.models[modelName].getCsvfindAllWithStream = getCsvfindAllWithStream
     if (!sequelize.models[modelName].BATCH_SIZE || defaultBatchSize) {
       sequelize.models[modelName].BATCH_SIZE = defaultBatchSize || DEFAULT_BATCH_SIZE;
     }
