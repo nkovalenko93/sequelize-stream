@@ -100,7 +100,6 @@ async function getCsvPerformSearch(model, inputStream, { batchSize = DEFAULT_BAT
       let indx = 0;
       for (const offset of offsets) {
         if (!inputStream.destroyed) {
-          console.log('BATCH: ' + batchSize)
           const difference = (batchSize + offset - max);
           if (!inputStream.destroyed) {
             const header = indx === 0 ? true : false;
