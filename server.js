@@ -6,7 +6,7 @@ const express = require('express')
 const app = express()
 const port = 3000
 
-const sequelize = new Sequelize('tceihvon', 'tceihvon', 'Z3VGhEPZV9gaGgC1PneSptb8cK-LASeO', { host: 'kashin.db.elephantsql.com', port: 5432, dialect: 'postgres' });
+const sequelize = new Sequelize('stream', 'stream', 'stream', { host: 'localhost', port: 5432, dialect: 'postgres' });
 
 class User extends Model {
 }
