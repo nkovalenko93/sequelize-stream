@@ -1,6 +1,6 @@
 {
   "name": "@unbegrenzt/sequelize-csv",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "export csv easy with sequelize",
   "main": "index.js",
   "scripts": {
