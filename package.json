@@ -1,5 +1,5 @@
 {
-  "name": "sequelize-csv",
+  "name": "sequelize-stream-csv",
   "version": "1.2.2",
   "description": "export csv easy with sequelize",
   "main": "index.js",
