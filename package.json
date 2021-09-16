@@ -15,7 +15,7 @@
     "sequelize",
     "stream"
   ],
-  "author": "Nikolai Kovalenko",
+  "author": "unbegrenzt",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/nkovalenko93/sequelize-stream/issues"
