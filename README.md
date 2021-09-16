@@ -48,6 +48,29 @@ const stream = db.models.User.destroyWithStream({
 stream.pipe(res);
 ```
 
+```
+app.get('/getCsv', (req, res) => {
+  res.set({
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': 'attachment; filename="testFile.csv"',
+  })
+
+  const stream = User.getCsvfindAllWithStream();
+  stream.on('data', chunk => {
+    console.log('\n\nchunk', typeof chunk, chunk.toString());
+  });
+  stream.on('error', error => {
+    console.log('\n\nERROR!!!!!', error);
+    res.end(error)
+  });
+  stream.on('end', () => {
+    console.log('\n\nEND!!!!!');
+    res.end()
+  });
+  stream.pipe(res);
+})
+```
+
 `batchSize` - is an optional parameter that means default batch size for target action (model batch size or default batch size will be taken if parameter is not defined).
 
 `isObjectMode` - is an optional parameter that switches object mode for a stream. If enabled then stream chunks will be an object. If disabled then stream chunk is a buffer as usual.
