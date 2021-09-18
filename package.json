@@ -1,7 +1,7 @@
 {
-  "name": "node-sequelize-stream",
-  "version": "1.1.2",
-  "description": "Library for streaming sequelize requests",
+  "name": "sequelize-stream-csv",
+  "version": "1.2.2",
+  "description": "export csv easy with sequelize",
   "main": "index.js",
   "scripts": {
     "lint": "eslint *.js",
@@ -9,18 +9,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nkovalenko93/sequelize-stream.git"
+    "url": "https://github.com/unbegrenzt/sequelize-stream.git"
   },
   "keywords": [
     "sequelize",
     "stream"
   ],
-  "author": "Nikolai Kovalenko",
+  "author": "unbegrenzt",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/nkovalenko93/sequelize-stream/issues"
   },
-  "homepage": "https://github.com/nkovalenko93/sequelize-stream#readme",
+  "homepage": "https://github.com/unbegrenzt/sequelize-stream#readme",
   "devDependencies": {
     "eslint": "7.26.0",
     "eslint-config-google": "0.14.0",
@@ -30,6 +30,7 @@
     "sequelize": "6.6.2"
   },
   "dependencies": {
+    "csv-stringify": "^5.6.5",
     "lodash.chunk": "4.2.0"
   }
 }
