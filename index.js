@@ -59,7 +59,9 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
       inputStream.push('[');
     }
     if (!inputStream.destroyed) {
+      let i = 0;
       for (const offset of offsets) {
+        i += 1;
         if (!inputStream.destroyed) {
           const difference = (batchSize + offset - max);
           if (!inputStream.destroyed) {
@@ -74,6 +76,9 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
               let dataToPush = isObjectMode ? items : JSON.stringify(items);
               if (isSingleArrayMode && !isObjectMode) {
                 dataToPush = dataToPush.substring(1, dataToPush.length - 1);
+                if (i !== offsets.length) {
+                  dataToPush += ',';
+                }
               }
               inputStream.push(dataToPush);
             }
