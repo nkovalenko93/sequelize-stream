@@ -152,7 +152,12 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
                   dataToPush = `,${dataToPush}`;
                 }
               }
-              inputStream.push(dataToPush);
+              if (items.length) {
+                inputStream.push(dataToPush);
+              }
+              if (!items.length || (items.length < batchSize)) {
+                break;
+              }
               if (isFirst) {
                 isFirst = false;
               }
