@@ -15,6 +15,15 @@ const getIsObjectMode = (model, params) => {
 };
 
 
+const getIsSingleArrayMode = (model, params) => {
+  let signleArrayMode = params.isSingleArrayMode;
+  if ((typeof signleArrayMode) !== 'boolean') {
+    signleArrayMode = model.IS_SINGLE_ARRAY_MODE || false;
+  }
+  return (signleArrayMode || false);
+};
+
+
 const createReadableStream = (model, params = {}) => {
   return new Readable({
     objectMode: getIsObjectMode(model, params),
@@ -45,6 +54,10 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
       start += batchSize;
     }
     const isObjectMode = getIsObjectMode(model, params);
+    const isSingleArrayMode = getIsSingleArrayMode(model, params);
+    if (!inputStream.destroyed && isSingleArrayMode && !isObjectMode) {
+      inputStream.push('[');
+    }
     if (!inputStream.destroyed) {
       for (const offset of offsets) {
         if (!inputStream.destroyed) {
@@ -58,13 +71,20 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
               })
             ).map(item => item.toJSON());
             if (!inputStream.destroyed) {
-              inputStream.push(isObjectMode ? items : JSON.stringify(items));
+              let dataToPush = isObjectMode ? items : JSON.stringify(items);
+              if (isSingleArrayMode && !isObjectMode) {
+                dataToPush = dataToPush.substring(1, dataToPush.length - 1);
+              }
+              inputStream.push(dataToPush);
             }
           }
         }
       }
     }
     if (!inputStream.destroyed) {
+      if (isSingleArrayMode && !isObjectMode) {
+        inputStream.push(']');
+      }
       inputStream.push(null); // Means end of stream
     }
   } catch (err) {

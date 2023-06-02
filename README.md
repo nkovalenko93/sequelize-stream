@@ -52,10 +52,13 @@ stream.pipe(res);
 
 `isObjectMode` - is an optional parameter that switches object mode for a stream. If enabled then stream chunks will be an object. If disabled then stream chunk is a buffer as usual.
 
+`isSingleArrayMode` - is an optional parameter (works only if `isObjectMode` is not set or set to `false`) that switches single array mode for a search stream. If enabled then stream chunks will look like single array, first chunk will be a `[` string, other chunks will be a strings without `[` in the beginning and without `]` in the end, and last chunk will be an `]`. If disabled then stream will behave as before.
+
 
 Also batch size can be set for each model separately like this:
 ```
 const User = instance.define('User', {...});
-User.BATCH_SIZE = 10;
-User.IS_OBJECT_MODE = true;
+User.BATCH_SIZE = 10; // optional
+User.IS_OBJECT_MODE = true; // optional
+User.IS_SINGLE_ARRAY_MODE = false; // optional
 ```
