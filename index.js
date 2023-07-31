@@ -1,7 +1,7 @@
 'use strict';
 
 const { Readable } = require('stream');
-const { Op } = require('sequelize');
+const { Op, Transaction } = require('sequelize');
 const splitByChunks = require('lodash.chunk');
 
 const DEFAULT_BATCH_SIZE = 100;
@@ -102,81 +102,73 @@ async function performSearchByPrimaryKey(primaryKeyField, model, inputStream, { 
  * @param {object} params - other Sequelize parameters
  */
 async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZE, limit, offset = 0, ...params }) {
-  try {
-    const primaryKeyField = model.primaryKeyAttributes[0];
-    if (primaryKeyField) {
-      const fieldDefinition = model.getAttributes()[primaryKeyField];
-      const isAutoIncrement = (fieldDefinition.primaryKey && (fieldDefinition.autoIncrement || fieldDefinition.autoIncrementIdentity));
-      if (isAutoIncrement) {
-        return performSearchByPrimaryKey(
-          primaryKeyField,
-          model,
-          inputStream,
-          { batchSize, limit, offset, ...params },
-        );
-      }
-    }
-    let max = limit;
-    if (!max) {
-      max = await model.count({ ...params, attributes: undefined, limit, offset });
-    }
-    const offsets = [];
-    let start = offset;
-    while (start < max) {
-      offsets.push(start);
-      start += batchSize;
-    }
-    const isObjectMode = getIsObjectMode(model, params);
-    const isSingleArrayMode = getIsSingleArrayMode(model, params);
-    if (!inputStream.destroyed && isSingleArrayMode && !isObjectMode) {
-      inputStream.push('[');
-    }
-    if (!inputStream.destroyed) {
-      let isFirst = true;
-      for (const offset of offsets) {
+  await model.sequelize.transaction(
+    { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+    async (transaction) => {
+      try {
+        const isObjectMode = getIsObjectMode(model, params);
+        const isSingleArrayMode = getIsSingleArrayMode(model, params);
+        if (!inputStream.destroyed && isSingleArrayMode && !isObjectMode) {
+          inputStream.push('[');
+        }
         if (!inputStream.destroyed) {
-          const difference = (batchSize + offset - max);
-          if (!inputStream.destroyed) {
-            const items = (
-              await model.findAll({
-                ...params,
-                offset,
-                limit: difference > 0 ? batchSize - difference : batchSize,
-              })
-            ).map(item => item.toJSON());
+          let isFirst = true;
+          let isFinished = false;
+          const currentLimit = (limit && (limit < batchSize)) ? limit : batchSize;
+          let currentOffset = offset || 0;
+          while (!isFinished) {
             if (!inputStream.destroyed) {
-              let dataToPush = isObjectMode ? items : JSON.stringify(items);
-              if (isSingleArrayMode && !isObjectMode) {
-                dataToPush = dataToPush.substring(1, dataToPush.length - 1);
-                if (!isFirst && items.length) {
-                  dataToPush = `,${dataToPush}`;
-                }
-              }
-              if (items.length) {
-                inputStream.push(dataToPush);
-              }
-              if (!items.length || (items.length < batchSize)) {
-                break;
-              }
+              const items = (
+                await model.findAll({
+                  ...params,
+                  offset: currentOffset,
+                  limit: currentLimit,
+                  transaction,
+                })
+              ).map(item => item.toJSON());
               if (isFirst) {
-                isFirst = false;
+                await model.create({
+                  bigintField: 5,
+                  integerField: 5,
+                  stringField: '5',
+                  username: `${(new Date()).getTime()}`
+                });
+              }
+              if (!inputStream.destroyed) {
+                let dataToPush = isObjectMode ? items : JSON.stringify(items);
+                if (isSingleArrayMode && !isObjectMode) {
+                  dataToPush = dataToPush.substring(1, dataToPush.length - 1);
+                  if (!isFirst && items.length) {
+                    dataToPush = `,${dataToPush}`;
+                  }
+                }
+                if (items.length) {
+                  inputStream.push(dataToPush);
+                }
+                if (!items.length || (items.length < batchSize)) {
+                  isFinished = true;
+                }
+                if (isFirst) {
+                  isFirst = false;
+                }
+                currentOffset += batchSize;
               }
             }
           }
         }
+        if (!inputStream.destroyed) {
+          if (isSingleArrayMode && !isObjectMode) {
+            inputStream.push(']');
+          }
+          inputStream.push(null); // Means end of stream
+        }
+      } catch (err) {
+        if (!inputStream.destroyed) {
+          inputStream.destroy(err);
+        }
       }
     }
-    if (!inputStream.destroyed) {
-      if (isSingleArrayMode && !isObjectMode) {
-        inputStream.push(']');
-      }
-      inputStream.push(null); // Means end of stream
-    }
-  } catch (err) {
-    if (!inputStream.destroyed) {
-      inputStream.destroy(err);
-    }
-  }
+  );
 }
 
 
@@ -340,7 +332,7 @@ function destroyWithStream(params) {
  * @param {object} sequelize - Sequelize object
  * @param {number} defaultBatchSize - default batch size
  */
-function init(sequelize, defaultBatchSize, isObjectMode = false) {
+function init(sequelize, defaultBatchSize, isObjectMode = false, isSingleArrayMode = false) {
   for (const modelName of Object.keys(sequelize.models)) {
     sequelize.models[modelName].findAllWithStream = findAllWithStream;
     sequelize.models[modelName].bulkCreateWithStream = bulkCreateWithStream;
@@ -351,6 +343,9 @@ function init(sequelize, defaultBatchSize, isObjectMode = false) {
     }
     if ((typeof sequelize.models[modelName].IS_OBJECT_MODE) !== 'boolean') {
       sequelize.models[modelName].IS_OBJECT_MODE = isObjectMode;
+    }
+    if ((typeof sequelize.models[modelName].IS_SINGLE_ARRAY_MODE) !== 'boolean') {
+      sequelize.models[modelName].IS_SINGLE_ARRAY_MODE = isSingleArrayMode;
     }
   }
 }
