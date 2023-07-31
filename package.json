@@ -1,6 +1,6 @@
 {
   "name": "node-sequelize-stream",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Library for streaming sequelize requests",
   "main": "index.js",
   "scripts": {
@@ -22,12 +22,12 @@
   },
   "homepage": "https://github.com/nkovalenko93/sequelize-stream#readme",
   "devDependencies": {
-    "eslint": "8.41.0",
+    "eslint": "8.46.0",
     "eslint-config-google": "0.14.0",
     "express": "4.18.2",
-    "pg": "8.11.0",
+    "pg": "8.11.1",
     "pg-hstore": "2.3.4",
-    "sequelize": "6.32.0"
+    "sequelize": "6.32.1"
   },
   "dependencies": {
     "lodash.chunk": "4.2.0"
