@@ -35,65 +35,6 @@ const createReadableStream = (model, params = {}) => {
 
 
 /**
- * @param {string} primaryKeyField - Sequelize model primary key
- * @param {object} model - Sequelize model
- * @param {object} inputStream - readable stream object
- * @param {number} batchSize - size of batches to fetch from database
- * @param {number} limit - Sequelize limit parameter
- * @param {number} offset - Sequelize offset parameter
- * @param {object} params - other Sequelize parameters
- */
-async function performSearchByPrimaryKey(primaryKeyField, model, inputStream, { batchSize = DEFAULT_BATCH_SIZE, limit, offset = 0, ...params }) {
-  const isObjectMode = getIsObjectMode(model, params);
-  const isSingleArrayMode = getIsSingleArrayMode(model, params);
-  if (!inputStream.destroyed && isSingleArrayMode && !isObjectMode) {
-    inputStream.push('[');
-  }
-  if (!inputStream.destroyed) {
-    let isFinished = false;
-    let lastId = 0;
-    while (!isFinished) {
-      let where = { ...(params.where || {}) };
-      if (where[primaryKeyField]) {
-        where = Op.and(where, { [primaryKeyField]: { [Op.gt]: lastId } });
-      } else {
-        where[primaryKeyField] = { [Op.gt]: lastId };
-      }
-      const items = (
-        await model.findAll({
-          ...params,
-          where,
-          ...(lastId ? {} : { offset }),
-          limit: batchSize,
-        })
-      ).map(item => item.toJSON());
-      if (!inputStream.destroyed) {
-        let dataToPush = isObjectMode ? items : JSON.stringify(items);
-        if (isSingleArrayMode && !isObjectMode) {
-          dataToPush = dataToPush.substring(1, dataToPush.length - 1);
-          if (lastId && items.length) {
-            dataToPush = `,${dataToPush}`;
-          }
-        }
-        inputStream.push(dataToPush);
-        if (items.length < batchSize) {
-          isFinished = true;
-        } else {
-          lastId = items[items.length - 1].id;
-        }
-      }
-    }
-  }
-  if (!inputStream.destroyed) {
-    if (isSingleArrayMode && !isObjectMode) {
-      inputStream.push(']');
-    }
-    inputStream.push(null); // Means end of stream
-  }
-}
-
-
-/**
  * @param {object} model - Sequelize model
  * @param {object} inputStream - readable stream object
  * @param {number} batchSize - size of batches to fetch from database
@@ -126,14 +67,6 @@ async function performSearch(model, inputStream, { batchSize = DEFAULT_BATCH_SIZ
                   transaction,
                 })
               ).map(item => item.toJSON());
-              if (isFirst) {
-                await model.create({
-                  bigintField: 5,
-                  integerField: 5,
-                  stringField: '5',
-                  username: `${(new Date()).getTime()}`
-                });
-              }
               if (!inputStream.destroyed) {
                 let dataToPush = isObjectMode ? items : JSON.stringify(items);
                 if (isSingleArrayMode && !isObjectMode) {
